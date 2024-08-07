@@ -25,7 +25,7 @@ const SplashScreen: React.FC = () => {
         }).start(() => {
             navigation.reset({
                 index: 0,
-                routes: [{ name: 'Deteksi' }],
+                routes: [{ name: 'Login' }],
             });
         });
     }, [opacity, navigation]);

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import React, { useState, useEffect } from "react";
 
+import { user } from "../data/index";
 import Spacing from "../constants/Spacing";
 import Font from "../constants/Font";
 import Colors from "../constants/Colors";
@@ -33,7 +34,7 @@ const HomeScreen: React.FC<Props> = ({ navigation, route }) => {
     // Fetch outfits based on the category
     const fetchOutfits = async () => {
       try {
-        const response = await axios.get(`http://192.168.26.16:5000/api/json/categories/${category}`);
+        const response = await axios.get(`http://34.128.112.213:5000/api/json/categories/${category}`);
         setOutfits(response.data.outfit);
       } catch (error) {
         console.error(error);
@@ -99,7 +100,7 @@ const HomeScreen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity
               key={index}
               style={styles.outfitCard}
-              onPress={() => navigation.navigate('ProductDetail', { idOutfit: item.idOutfit })}
+              onPress={() => navigation.navigate('OutfitDetail', { idOutfit: item.idOutfit })}
             >
               <Image
                 source={{ uri: item.strOutfitThumb }}

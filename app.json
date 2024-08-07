@@ -5,10 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "updates": {
-      "fallbackToCacheTimeout": 0
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,14 +21,28 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.firlyaulia.FSkinHue"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-asset",
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3c74464c-c95b-47d5-8b8d-428c5334c1dc"
+      }
+    }
   }
 }

@@ -4,19 +4,25 @@
  */
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Product } from "./data";
 
 declare global {
   namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
+    interface RootParamList extends RootStackParamList { }
   }
 }
 
 export type RootStackParamList = {
   Splash: undefined;
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+  VerifyOtp: { email: string };
+  ResetPassword: { email: string };
   Deteksi: undefined;
-  PaletWarna: { category: string; reportImage: string; details: any };
   Home: { category: string };
-  ProductDetail: { idOutfit: string };
+  OutfitDetail: { idOutfit: string };
+  WarnaDetail: { warna: string };
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =

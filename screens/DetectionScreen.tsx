@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -12,14 +12,16 @@ import {
     Platform,
     StatusBar,
     ActivityIndicator,
+    BackHandler,
 } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 import Spacing from "../constants/Spacing";
 import Font from "../constants/Font";
 import Colors from "../constants/Colors";
-import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const IMAGE_MAX_WIDTH = width * 0.9;
@@ -29,8 +31,27 @@ const DetectionScreen: React.FC = () => {
     const [imageWidth, setImageWidth] = useState<number>(0);
     const [imageHeight, setImageHeight] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
-    const [reportImage, setReportImage] = useState<string | null>(null);
+    const [loadingWarna, setLoadingWarna] = useState<boolean>(false);
     const navigation = useNavigation();
+
+    // Custom back button behavior
+    useEffect(() => {
+        const backAction = () => {
+            if (navigation.canGoBack()) {
+                navigation.navigate('Deteksi'); // Or navigate to a different screen if needed
+                return true;
+            } else {
+                return false;
+            }
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction
+        );
+
+        return () => backHandler.remove();
+    }, [navigation]);
 
     const handleUploadImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
@@ -69,12 +90,11 @@ const DetectionScreen: React.FC = () => {
         setSelectedImage(null);
         setImageWidth(0);
         setImageHeight(0);
-        setReportImage(null);
     };
 
     const handlePrediction = async (endpoint: string) => {
         if (!selectedImage) {
-            Alert.alert("No image selected", "Please select or take a photo to proceed.");
+            Alert.alert("Tidak ada gambar yang dipilih", "Tolong unggah gambar atau ambil foto untuk diproses.");
             return;
         }
 
@@ -93,42 +113,83 @@ const DetectionScreen: React.FC = () => {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-
             const prediction = response.data[0].class;
-            const reportImagePath = response.data[0].report_image_path;
-            const fullReportImagePath = `http://192.168.26.16:5000/uploads/${reportImagePath}`;
-            
-            setReportImage(fullReportImagePath);
-
+            console.log(prediction);
             if (prediction === "Tidak Diketahui") {
                 Alert.alert("Hasil Prediksi", "Prediction: Tidak Diketahui");
             } else {
-                const data = response.data[0];
-                navigation.navigate('PaletWarna', { 
-                    category: prediction,
-                    reportImage: fullReportImagePath,
-                    details: data.skin_tone_result,
-                });
+                navigation.navigate('Home', { category: prediction });
             }
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "Pastikan anda mengambil foto wajah yang jelas.");
+            Alert.alert("Error", "Kesalahan saat membuat prediksi.");
         } finally {
             setLoading(false);
         }
     };
 
+    const handlePredictionWarna = async (endpoint: string) => {
+        if (!selectedImage) {
+            Alert.alert("Tidak ada gambar yang dipilih", "Tolong unggah gambar atau ambil foto untuk diproses.");
+            return;
+        }
+
+        setLoadingWarna(true);
+
+        const formData = new FormData();
+        formData.append('files', {
+            uri: selectedImage,
+            name: 'photo.jpg',
+            type: 'image/jpeg'
+        } as any);
+
+        try {
+            const response = await axios.post(endpoint, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            const prediction = response.data[0].class;
+            console.log(prediction);
+
+            if (prediction === "Tidak Diketahui") {
+                Alert.alert("Hasil Prediksi", "Prediction: Tidak Diketahui");
+            } else {
+                navigation.navigate('WarnaDetail', { warna: prediction });
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", "Something went wrong while making the prediction.");
+        } finally {
+            setLoadingWarna(false);
+        }
+    };
+
+    const handleLogout = async () => {
+        await AsyncStorage.removeItem('token');
+        navigation.navigate('Login');
+    };
+
     return (
         <SafeAreaView style={styles.container}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomColor: Colors.onPrimary }}>
+                <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+
+                <Text style={{ fontFamily: Font["poppins-semiBold"], fontSize: Spacing * 2, color: Colors.onPrimary }}></Text>
+
+                <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                    <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+            </View>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
                     <Text style={{ fontFamily: Font["poppins-semiBold"], fontSize: Spacing * 2, color: Colors.gold }}>
-                        Rekomendasi Outfit
+                        Selamat Datang,
                     </Text>
                 </View>
                 <View style={styles.header}>
                     <Text style={{ fontFamily: Font["poppins-semiBold"], fontSize: Spacing * 2, color: Colors.gold }}>
-                        Berdasarkan Korelasi Warna Kulit
+                        Di Aplikasi F-SkinHue
                     </Text>
                 </View>
 
@@ -148,24 +209,34 @@ const DetectionScreen: React.FC = () => {
                     <Image source={{ uri: selectedImage }} style={{ width: imageWidth, height: imageHeight, borderRadius: Spacing * 2, alignSelf: 'center', marginVertical: Spacing }} />
                 )}
 
-                {/* {reportImage && (
-                    <Image source={{ uri: reportImage }} style={{ width: imageWidth, height: imageHeight, borderRadius: Spacing * 2, alignSelf: 'center', marginVertical: Spacing }} />
-                )} */}
-
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity
-                        onPress={() => handlePrediction('http://192.168.26.16:5000/yolo')}
+                        onPress={() => handlePrediction('http://34.128.112.213:5000/yolo')}
                         style={[styles.button, styles.detectButton]}
                         disabled={loading}
                     >
                         {loading ? (
                             <ActivityIndicator size="small" color={Colors.onPrimary} />
                         ) : (
-                            <Text style={[styles.buttonText, styles.detectButtonText]}>Ayo Deteksi!</Text>
+                            <Text style={[styles.buttonText, styles.detectButtonText]}>Ayo Deteksi Undertone!</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        onPress={() => handlePredictionWarna('http://34.128.112.213:5000/yolo-warna')}
+                        style={[styles.button, styles.detectButton]}
+                        disabled={loadingWarna}
+                    >
+                        {loadingWarna ? (
+                            <ActivityIndicator size="small" color={Colors.onPrimary} />
+                        ) : (
+                            <Text style={[styles.buttonText, styles.detectButtonText]}>Ayo Deteksi Warna!</Text>
                         )}
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
         </SafeAreaView>
     );
 };
@@ -182,8 +253,6 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
     },
     title: {
         fontFamily: Font["poppins-bold"],
@@ -216,6 +285,24 @@ const styles = StyleSheet.create({
         fontFamily: Font["poppins-semiBold"],
         color: Colors.splash,
         fontSize: Spacing * 1.6,
+    },
+    logoutButton: {
+        
+        backgroundColor: Colors.gold,
+        padding: Spacing / 2,
+        borderRadius: Spacing,
+        alignItems: 'center',
+        marginVertical: Spacing * 2,
+    },
+    logoutButtonText: {
+        fontFamily: Font["poppins-semiBold"],
+        color: Colors.splash,
+        fontSize: Spacing * 1.6,
+    },
+    logo: {
+        width: 90, // adjust the width as needed
+        height: 90, // adjust the height as needed
+        resizeMode: 'contain', // to keep the aspect ratio
     },
 });
 

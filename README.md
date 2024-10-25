@@ -1,5 +1,3 @@
-# Firly Aulia Zahra
-
 ## Get Started
 
 install dev dependencies
